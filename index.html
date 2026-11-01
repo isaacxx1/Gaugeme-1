@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#7564ed">
+  <meta name="description" content="A personal colored score gauge for evaluating anything.">
+  <title>Score Gauge</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?64"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f5fb;
+      --surface: #ffffff;
+      --surface-2: #f7f7fc;
+      --ink: #24243b;
+      --muted: #777c91;
+      --line: #e5e6ef;
+      --accent: #7564ed;
+      --good: #28b77d;
+      --shadow: 0 8px 28px rgba(34, 30, 80, .055);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171925;
+        --surface: #222536;
+        --surface-2: #292c3e;
+        --ink: #f4f3ff;
+        --muted: #a7abc1;
+        --line: #3b3e52;
+        --shadow: 0 8px 28px rgba(0, 0, 0, .12);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    .app {
+      width: min(100%, 640px);
+      margin: 0 auto;
+      padding: max(17px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 1px 19px; }
+    .eyebrow { color: var(--accent); font-weight: 850; font-size: 10px; letter-spacing: 1.8px; text-transform: uppercase; }
+    h1 { margin: 5px 0 4px; font-size: 27px; letter-spacing: -1px; line-height: 1.12; }
+    .sub { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .logo { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+    .logo svg { width: 31px; height: 31px; }
+    .panel { padding: 17px; margin-bottom: 13px; border-radius: 21px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .field-label { display: block; margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: 1px; }
+    input[type="text"], input[type="number"], textarea, select {
+      min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; color: var(--ink); background: var(--surface-2); outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    input[type="text"], textarea { font-size: 14px; }
+    .gauge { display: block; width: 100%; max-width: 385px; margin: 8px auto 0; overflow: visible; }
+    .gauge .score-text { fill: var(--ink); font-size: 48px; font-weight: 850; letter-spacing: -2px; text-anchor: middle; }
+    .gauge .out-of { fill: var(--muted); font-size: 10px; letter-spacing: 2px; text-anchor: middle; }
+    .status-wrap { display: flex; justify-content: center; }
+    .status { display: inline-flex; margin: 3px auto 7px; padding: 7px 13px; border-radius: 30px; font-size: 10px; font-weight: 900; letter-spacing: .55px; }
+    .caption { margin: 0 0 18px; text-align: center; color: var(--muted); font-size: 12px; }
+    .score-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+    .score-top .sub { max-width: 215px; }
+    .number { width: 85px !important; padding: 8px !important; text-align: center; font-size: 22px !important; font-weight: 850; }
+    input[type="range"] { width: 100%; margin: 18px 0 7px; accent-color: var(--accent); cursor: pointer; }
+    .scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .actions { display: flex; gap: 9px; margin-top: 13px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 800; cursor: pointer; }
+    .btn:active { transform: scale(.985); }
+    .btn-primary { flex: 1; border-color: var(--accent); background: var(--accent); color: #fff; }
+    .btn-soft { background: var(--surface-2); }
+    .btn-danger { color: #de626b; }
+    .hint { min-height: 16px; margin-top: 8px; text-align: center; font-size: 11px; color: var(--good); }
+    .section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-head h2 { margin: 0; font-size: 15px; letter-spacing: -.2px; }
+    .text-btn { border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 800; padding: 6px; cursor: pointer; }
+    .history { display: flex; flex-direction: column; gap: 8px; }
+    .entry { width: 100%; display: flex; align-items: center; gap: 11px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; text-align: left; color: var(--ink); background: var(--surface-2); cursor: pointer; }
+    .entry:active { transform: scale(.99); }
+    .entry-main { flex: 1; min-width: 0; }
+    .entry-name { font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
+    .entry-notes { margin-top: 4px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .entry-date { margin-top: 4px; font-size: 10px; color: var(--muted); }
+    .entry-score { font-size: 21px; font-weight: 900; white-space: nowrap; }
+    .entry-score small { font-size: 10px; font-weight: 700; color: var(--muted); }
+    .empty { padding: 24px 10px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.65; }
+    .foot { padding: 4px 11px; color: var(--muted); text-align: center; font-size: 10px; line-height: 1.55; }
+    .color-row { display: flex; gap: 8px; align-items: center; }
+    .color-row select { flex: 1; }
+    .color-dot { width: 19px; height: 19px; flex: none; border-radius: 50%; background: linear-gradient(135deg, #ee5757, #f5c64f, #27b77d); }
+    @media (min-width: 500px) { .app { padding-left: 23px; padding-right: 23px; } .panel { padding: 21px; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div>
+        <div class="eyebrow">PERSONAL TOOL · 01</div>
+        <h1>Score Gauge</h1>
+        <div class="sub">Give anything a score of its own.</div>
+      </div>
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none"><path d="M5 25a15 15 0 0 1 30 0" stroke="#7564ed" stroke-width="4" stroke-linecap="round"/><path d="m20 24 9-12" stroke="#7564ed" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="24" r="3.5" fill="#7564ed"/></svg>
+      </div>
+    </header>
+
+    <section class="panel" aria-label="Current evaluation">
+      <label class="field-label" for="item-name">WHAT ARE YOU EVALUATING?</label>
+      <input id="item-name" type="text" maxlength="100" placeholder="e.g. Business idea, movie, decision" value="My evaluation" autocomplete="off">
+
+      <svg class="gauge" viewBox="0 0 320 208" role="img" aria-label="Colored score gauge">
+        <defs>
+          <linearGradient id="gauge-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#ed555b"/><stop offset="27%" stop-color="#f18b4c"/><stop offset="51%" stop-color="#f0c64f"/><stop offset="75%" stop-color="#95cb67"/><stop offset="100%" stop-color="#29b77e"/>
+          </linearGradient>
+        </defs>
+        <path d="M34 158 A126 126 0 0 1 286 158" fill="none" stroke="var(--line)" stroke-width="21" stroke-linecap="round"/>
+        <path id="colored-arc" d="M34 158 A126 126 0 0 1 286 158" fill="none" stroke="url(#gauge-gradient)" stroke-width="17" stroke-linecap="round"/>
+        <g id="ticks"></g>
+        <text x="21" y="181" font-size="12" fill="var(--muted)">0</text>
+        <text x="299" y="181" text-anchor="end" font-size="12" fill="var(--muted)">100</text>
+        <line id="needle" x1="160" y1="156" x2="160" y2="70" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="160" cy="156" r="10" fill="#7564ed"/><circle cx="160" cy="156" r="4" fill="#fff"/>
+        <text id="big-score" class="score-text" x="160" y="132">72</text>
+        <text class="out-of" x="160" y="150">OUT OF 100</text>
+      </svg>
+
+      <div class="status-wrap"><div class="status" id="score-status">GOOD</div></div>
+      <p class="caption" id="score-caption">A strong score, with room to grow.</p>
+
+      <div class="score-top">
+        <div><label class="field-label" for="score-slider">ADJUST YOUR SCORE</label><div class="sub">Slide or type a number.</div></div>
+        <input class="number" id="score-number" type="number" min="0" max="100" step="1" value="72" inputmode="numeric" aria-label="Score from 0 to 100">
+      </div>
+      <input id="score-slider" type="range" min="0" max="100" step="1" value="72" aria-label="Adjust score">
+      <div class="scale"><span>0 · Lowest</span><span>50 · Middle</span><span>100 · Highest</span></div>
+    </section>
+
+    <section class="panel">
+      <label class="field-label" for="item-notes">NOTES (OPTIONAL)</label>
+      <textarea id="item-notes" rows="2" maxlength="700" placeholder="Why did you give it this score?"></textarea>
+      <div class="actions">
+        <button id="save-button" class="btn btn-primary" type="button">＋ Save evaluation</button>
+        <button id="reset-button" class="btn btn-soft" type="button">Reset</button>
+      </div>
+      <div id="feedback" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><h2>Saved evaluations</h2><button id="export-button" class="text-btn" type="button">Export</button></div>
+      <div id="history" class="history"><div class="empty">Your saved scores will appear here.<br>Rate something and tap “Save evaluation”.</div></div>
+      <div class="actions"><button id="clear-button" class="btn btn-soft btn-danger" type="button" style="width:100%">Clear all saved scores</button></div>
+    </section>
+    <div class="foot">Your rating, your rules. Scores are personal judgments, not objective measurements. Data is stored locally on this device.</div>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+      const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+      if (tg) {
+        try { tg.ready(); tg.expand(); } catch (_) {}
+        try { if (tg.setHeaderColor) tg.setHeaderColor('bg_color'); } catch (_) {}
+        try { if (tg.setBackgroundColor) tg.setBackgroundColor('bg_color'); } catch (_) {}
+      }
+      const $ = id => document.getElementById(id);
+      const nameInput = $('item-name'), notesInput = $('item-notes');
+      const slider = $('score-slider'), number = $('score-number');
+      const feedback = $('feedback'), history = $('history');
+      const STORAGE_KEY = 'score-gauge-v1';
+      let score = 72, records = [], feedbackTimer;
+
+      function point(deg, radius) {
+        const r = deg * Math.PI / 180;
+        return [160 + radius * Math.cos(r), 156 - radius * Math.sin(r)];
+      }
+      function setupTicks() {
+        let html = '';
+        for (let i = 0; i <= 10; i++) {
+          const a = 180 - i * 18, p1 = point(a, 105), p2 = point(a, 115);
+          html += `<line x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}" stroke="var(--ink)" stroke-opacity=".3" stroke-width="${i % 5 === 0 ? 2 : 1}"/>`;
+        }
+        $('ticks').innerHTML = html;
+      }
+      function grade(s) {
+        if (s < 20) return ['VERY LOW', '#ed555b', 'At the very bottom of your scale.'];
+        if (s < 40) return ['LOW', '#f18b4c', 'Below the middle of your scale.'];
+        if (s < 60) return ['MODERATE', '#d3ad35', 'Around the middle of your scale.'];
+        if (s < 80) return ['GOOD', '#86b855', 'A strong score, with room to grow.'];
+        return ['EXCELLENT', '#29b77e', 'Near the top of your chosen scale.'];
+      }
+      function setScore(v) {
+        const n = Number(v);
+        score = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+        slider.value = String(score); number.value = String(score); $('big-score').textContent = String(score);
+        const a = 180 - score * 1.8, tip = point(a, 85);
+        $('needle').setAttribute('x2', tip[0]); $('needle').setAttribute('y2', tip[1]);
+        const g = grade(score), status = $('score-status');
+        status.textContent = g[0]; status.style.color = g[1]; status.style.backgroundColor = g[1] + '20';
+        $('score-caption').textContent = g[2];
+        const arc = $('colored-arc');
+        if (score === 0) arc.setAttribute('opacity', '0');
+        else {
+          arc.setAttribute('opacity', '1');
+          const start = point(180, 126), end = point(180 - score * 1.8, 126);
+          const large = score > 50 ? 1 : 0;
+          arc.setAttribute('d', `M ${start[0]} ${start[1]} A 126 126 0 ${large} 1 ${end[0]} ${end[1]}`);
+        }
+      }
+      function toast(msg, error = false) {
+        feedback.textContent = msg; feedback.style.color = error ? '#ed555b' : 'var(--good)';
+        clearTimeout(feedbackTimer); feedbackTimer = setTimeout(() => { feedback.textContent = ''; }, 4000);
+      }
+      function loadRecords() {
+        try {
+          const value = localStorage.getItem(STORAGE_KEY);
+          records = value ? JSON.parse(value) : [];
+          if (!Array.isArray(records)) records = [];
+        } catch (_) { records = []; }
+      }
+      function storeRecords() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); return true; }
+        catch (_) { return false; }
+      }
+      function safeDate(value) {
+        try { return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+        catch (_) { return ''; }
+      }
+      function renderRecords() {
+        history.replaceChildren();
+        if (!records.length) {
+          const empty = document.createElement('div'); empty.className = 'empty';
+          empty.append('Your saved scores will appear here.'); empty.append(document.createElement('br')); empty.append('Rate something and tap “Save evaluation”.'); history.append(empty); return;
+        }
+        records.forEach(r => {
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'entry';
+          const main = document.createElement('div'); main.className = 'entry-main';
+          const title = document.createElement('div'); title.className = 'entry-name'; title.textContent = r.name || 'Untitled evaluation';
+          main.append(title);
+          if (r.notes) { const nt = document.createElement('div'); nt.className = 'entry-notes'; nt.textContent = r.notes; main.append(nt); }
+          const date = document.createElement('div'); date.className = 'entry-date'; date.textContent = safeDate(r.createdAt); main.append(date);
+          const val = document.createElement('div'); val.className = 'entry-score'; val.style.color = grade(r.score)[1]; val.append(String(r.score));
+          const small = document.createElement('small'); small.textContent = '/100'; val.append(small);
+          button.append(main, val); button.title = 'Tap to load this evaluation';
+          button.addEventListener('click', () => {
+            nameInput.value = r.name || ''; notesInput.value = r.notes || ''; setScore(r.score);
+            toast('Loaded. Change it and save to create an updated entry.');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          history.append(button);
+        });
+      }
+      slider.addEventListener('input', () => setScore(slider.value));
+      number.addEventListener('input', () => { if (number.value !== '') setScore(number.value); });
+      number.addEventListener('change', () => setScore(number.value));
+      $('save-button').addEventListener('click', () => {
+        const title = nameInput.value.trim();
+        if (!title) { toast('Give this evaluation a name first.', true); nameInput.focus(); return; }
+        records.unshift({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: title, score, notes: notesInput.value.trim(), createdAt: new Date().toISOString() });
+        if (records.length > 150) records = records.slice(0, 150);
+        const saved = storeRecords(); renderRecords();
+        toast(saved ? 'Evaluation saved on this device.' : 'Storage unavailable. This session may not be saved.');
+        if (tg && tg.HapticFeedback) { try { tg.HapticFeedback.notificationOccurred('success'); } catch (_) {} }
+      });
+      $('reset-button').addEventListener('click', () => {
+        nameInput.value = ''; notesInput.value = ''; setScore(50); toast('Ready for a new evaluation.');
+      });
+      $('clear-button').addEventListener('click', () => {
+        if (!records.length) { toast('There are no saved evaluations to clear.'); return; }
+        records = []; storeRecords(); renderRecords(); toast('All saved evaluations cleared.');
+      });
+      $('export-button').addEventListener('click', async () => {
+        if (!records.length) { toast('Save at least one evaluation to export.'); return; }
+        const content = JSON.stringify(records, null, 2);
+        try {
+          if (navigator.share && tg) {
+            await navigator.share({ title: 'My Score Gauge evaluations', text: content });
+            toast('Ready to share.');
+          } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(content); toast('Export data copied to clipboard.');
+          } else {
+            const blob = new Blob([content], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'score-gauge-evaluations.json'; a.click(); URL.revokeObjectURL(a.href); toast('Export file prepared.');
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+          try {
+            const blob = new Blob([content], { type: 'application/json' }); const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = 'score-gauge-evaluations.json'; a.click(); URL.revokeObjectURL(a.href); toast('Export file prepared.');
+          } catch (_) { toast('Could not export on this device.', true); }
+        }
+      });
+      setupTicks(); loadRecords(); setScore(72); renderRecords();
+    })();
+  </script>
+</body>
+</html>
