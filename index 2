@@ -1,0 +1,170 @@
+from pathlib import Path
+
+html = r'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <title>Control & Judgment Check-in</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#101827; --panel:#192538; --panel2:#202f45; --text:#f3f6fb;
+      --muted:#aab8ca; --accent:#8bb8ff; --line:#33445c; --good:#9bd6b1;
+    }
+    * { box-sizing:border-box }
+    body {
+      margin:0; background:linear-gradient(180deg,#101827,#121d2d 55%,#101827);
+      color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      padding: max(18px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+    }
+    main { max-width:680px; margin:0 auto }
+    header { padding:12px 2px 20px }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:750; letter-spacing:.12em; text-transform:uppercase }
+    h1 { font-size:clamp(27px,7vw,36px); line-height:1.08; margin:9px 0 10px; letter-spacing:-.04em }
+    .intro { color:var(--muted); margin:0; max-width:55ch }
+    .notice { background:#1c2b40; border:1px solid #344a66; border-radius:14px; padding:13px 14px; color:#d7e4f5; font-size:14px; margin:0 0 18px }
+    .scale-note { color:var(--muted); font-size:13px; margin:0 0 12px }
+    .item { background:var(--panel); border:1px solid var(--line); border-radius:17px; padding:16px; margin:11px 0 }
+    .item-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start }
+    h2 { font-size:16px; margin:0 0 5px }
+    .desc { color:var(--muted); font-size:13px; margin:0; max-width:52ch }
+    .value { flex:0 0 auto; min-width:48px; text-align:center; background:var(--panel2); color:var(--accent); font-weight:800; font-size:19px; padding:5px 8px; border-radius:10px }
+    input[type=range] { width:100%; margin:17px 0 3px; accent-color:var(--accent); cursor:pointer }
+    .ends { display:flex; justify-content:space-between; color:var(--muted); font-size:11px; gap:8px }
+    .ends span:last-child { text-align:right }
+    .section-title { font-size:18px; margin:23px 2px 9px }
+    textarea { width:100%; min-height:82px; resize:vertical; border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:13px; padding:12px; font:inherit; font-size:14px }
+    .summary { background:#17283b; border:1px solid #3b5877; border-radius:17px; padding:16px; margin-top:16px }
+    .summary h2 { font-size:17px; margin-bottom:7px }
+    .summary p { color:var(--muted); font-size:13px; margin:0 0 10px }
+    .statline { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #30445d; font-size:14px }
+    .statline:last-child { border:0 }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px }
+    button { border:0; border-radius:13px; padding:13px 12px; font:700 14px system-ui; cursor:pointer }
+    .primary { background:var(--accent); color:#102039 }
+    .secondary { background:var(--panel2); color:var(--text); border:1px solid var(--line) }
+    .footer { color:var(--muted); font-size:12px; text-align:center; padding:18px 8px 4px }
+    .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0) }
+    @media (max-width:390px) { .actions { grid-template-columns:1fr } .item { padding:14px } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Daily mental-state check-in</div>
+    <h1>Control &amp; judgment sensitivity</h1>
+    <p class="intro">Notice when uncertainty, imperfection or uncomfortable feelings are pulling you into control, judgment and mental struggle.</p>
+  </header>
+
+  <div class="notice"><strong>Purpose:</strong> observe the pattern, not prove that your thoughts are true or false. Rate once, approximately. This is a reflection tool, not a diagnosis.</div>
+  <p class="scale-note">Rate how strongly each experience showed up today. For the final measure, a higher score means more flexibility.</p>
+
+  <section id="questions" aria-label="Daily assessment">
+    <div class="item" data-name="Control urgency" data-desc="How strongly did I feel that things must happen according to my expectations?">
+      <div class="item-top"><div><h2>1. Control urgency</h2><p class="desc">How strongly did I feel that things must happen according to my expectations?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Control urgency" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · No urgency</span><span>10 · Must control</span></div>
+    </div>
+    <div class="item" data-name="Uncertainty intolerance" data-desc="How difficult was it to leave unanswered questions or unresolved situations alone?">
+      <div class="item-top"><div><h2>2. Uncertainty intolerance</h2><p class="desc">How difficult was it to leave unanswered questions or unresolved situations alone?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Uncertainty intolerance" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Can leave it open</span><span>10 · Must resolve it</span></div>
+    </div>
+    <div class="item" data-name="Imperfection sensitivity" data-desc="How strongly did small mistakes, flaws or unexpected changes disturb my emotional state?">
+      <div class="item-top"><div><h2>3. Imperfection sensitivity</h2><p class="desc">How strongly did small mistakes, flaws or unexpected changes disturb my emotional state?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Imperfection sensitivity" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Barely affected</span><span>10 · Extremely affected</span></div>
+    </div>
+    <div class="item" data-name="Global judgment" data-desc="How often did I turn small events into conclusions about myself, other people or life?">
+      <div class="item-top"><div><h2>4. Global judgment</h2><p class="desc">How often did I turn small events into conclusions about myself, other people or life?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Global judgment" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Kept things specific</span><span>10 · Judged everything</span></div>
+    </div>
+    <div class="item" data-name="Emotional resistance" data-desc="How much did I fight, reject or try to eliminate my current feelings?">
+      <div class="item-top"><div><h2>5. Emotional resistance</h2><p class="desc">How much did I fight, reject or try to eliminate my current feelings?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Emotional resistance" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Allowed feelings</span><span>10 · Fighting feelings</span></div>
+    </div>
+    <div class="item" data-name="Mental monitoring" data-desc="How much did I monitor everything to decide whether it was right, wrong, safe or acceptable?">
+      <div class="item-top"><div><h2>6. Mental monitoring</h2><p class="desc">How much did I monitor everything to decide whether it was right, wrong, safe or acceptable?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Mental monitoring" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Little monitoring</span><span>10 · Constant monitoring</span></div>
+    </div>
+    <div class="item" data-name="Ability to leave things alone" data-desc="How capable was I of letting an imperfect or uncertain situation remain without investigating or correcting it?">
+      <div class="item-top"><div><h2>7. Ability to leave things alone</h2><p class="desc">How capable was I of letting an imperfect or uncertain situation remain without investigating or correcting it?</p></div><output class="value">0/10</output></div>
+      <input aria-label="Ability to leave things alone" type="range" min="0" max="10" value="0"><div class="ends"><span>0 · Very difficult</span><span>10 · More flexible</span></div>
+    </div>
+  </section>
+
+  <h2 class="section-title">One brief observation (optional)</h2>
+  <textarea id="note" placeholder="What happened? What did I feel? What interpretation did my mind produce?"></textarea>
+
+  <section class="summary" aria-live="polite">
+    <h2>Today's snapshot</h2>
+    <p>Use this as a record, not a score of your worth or a test you need to pass.</p>
+    <div id="summaryRows"></div>
+  </section>
+
+  <div class="actions">
+    <button class="primary" id="send">Send to Telegram</button>
+    <button class="secondary" id="copy">Copy assessment</button>
+    <button class="secondary" id="reset">Reset ratings</button>
+    <button class="secondary" id="download">Download .txt</button>
+  </div>
+  <div class="footer">A difficult score is information, not a verdict. You can leave some questions unanswered and return to ordinary life.</div>
+</main>
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+  const cards = [...document.querySelectorAll('.item')];
+  const summary = document.getElementById('summaryRows');
+  const getData = () => cards.map(card => ({
+    name: card.dataset.name,
+    value: Number(card.querySelector('input').value)
+  }));
+  const render = () => {
+    summary.innerHTML = '';
+    cards.forEach(card => {
+      const input = card.querySelector('input');
+      card.querySelector('output').textContent = input.value + '/10';
+      const row = document.createElement('div');
+      row.className = 'statline';
+      const name = document.createElement('span'); name.textContent = card.dataset.name;
+      const value = document.createElement('strong'); value.textContent = input.value + '/10';
+      row.append(name, value); summary.append(row);
+    });
+  };
+  const report = () => {
+    const lines = getData().map(x => `${x.name}: ${x.value}/10`);
+    return `CONTROL & JUDGMENT — DAILY ASSESSMENT\n${new Date().toLocaleString()}\n\n${lines.join('\n')}\n\nObservation: ${document.getElementById('note').value.trim() || '—'}\n\nReflection: These ratings describe today's experience; they are not diagnoses or judgments about me or anyone else.`;
+  };
+  cards.forEach(card => card.querySelector('input').addEventListener('input', render));
+  document.getElementById('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(report()); alert('Assessment copied.'); }
+    catch(e) { window.prompt('Copy your assessment:', report()); }
+  });
+  document.getElementById('send').addEventListener('click', () => {
+    if (tg && tg.initData) {
+      tg.sendData(JSON.stringify({type:'control_judgment_assessment', text:report(), ratings:getData(), note:document.getElementById('note').value.trim()}));
+    } else {
+      alert('Open this page inside your Telegram bot to send the assessment to Telegram. You can use Copy assessment here.');
+    }
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    cards.forEach(card => card.querySelector('input').value = 0);
+    document.getElementById('note').value = '';
+    render();
+  });
+  document.getElementById('download').addEventListener('click', () => {
+    const blob = new Blob([report()], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='control-judgment-assessment.txt'; a.click();
+    URL.revokeObjectURL(url);
+  });
+  render();
+})();
+</script>
+</body>
+</html>'''
+
+path = Path("/mnt/data/index.html")
+path.write_text(html, encoding="utf-8")
+print(f"Created {path} ({path.stat().st_size} bytes)")
